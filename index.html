@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-100 dark:bg-slate-950">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FinanzasPro - Control de Gastos</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            500: '#059669', // Emerald de alto contraste
+                            600: '#047857',
+                            700: '#065f46',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- PWA Link -->
+    <link rel="manifest" id="pwa-manifest">
+    <meta name="theme-color" content="#047857">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FinanzasPro">
+    <link class="rounded-xl" rel="apple-touch-icon" href="https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&w=180&q=80">
+    <style>
+        /* Deshabilitar selecciones molestas en pantallas táctiles */
+        .no-select {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        /* Tap highlights transparentes para móvil */
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+    </style>
+</head>
+<body class="h-full font-sans antialiased text-slate-950 dark:text-slate-50 flex flex-col no-select bg-slate-100 dark:bg-slate-950 transition-colors duration-150">
+
+    <!-- HEADER PRINCIPAL -->
+    <header class="sticky top-0 z-40 bg-white dark:bg-slate-900 border-b-2 border-slate-300 dark:border-slate-800 shadow-md transition-colors">
+        <div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-2.5">
+                <div class="p-2.5 bg-emerald-600 dark:bg-emerald-700 text-white rounded-xl shadow-sm">
+                    <i data-lucide="wallet" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-black tracking-tight text-slate-950 dark:text-white">FinanzasPro</h1>
+                    <p class="text-[11px] font-bold text-slate-700 dark:text-slate-300 tracking-wide uppercase">Control Quincenal</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-1.5">
+                <button onclick="toggleDarkMode()" class="p-2.5 text-slate-900 dark:text-slate-100 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 rounded-xl transition-colors" title="Cambiar Tema">
+                    <i id="theme-icon" data-lucide="moon" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER (Simula pantalla de celular) -->
+    <main class="flex-1 overflow-y-auto max-w-md w-full mx-auto bg-white dark:bg-slate-900 pb-28 shadow-xl border-x-0 sm:border-x border-slate-200 dark:border-slate-800">
+        
+        <!-- PESTAÑA 1: INICIO (BALANCE, FILTROS, HISTORIAL) -->
+        <section id="tab-home" class="space-y-5">
+            
+            <!-- TARJETA DE BALANCE ALTO CONTRASTE -->
+            <div class="p-4 bg-emerald-700 dark:bg-emerald-800 text-white rounded-b-3xl shadow-lg border-b border-emerald-800">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-emerald-100 text-xs font-bold tracking-wider uppercase">Saldo Disponible Estimado</span>
+                    <span class="px-3 py-1 bg-black/30 border border-white/20 rounded-full text-[11px] font-extrabold tracking-wide uppercase" id="current-period-label">Este Mes</span>
+                </div>
+                <div class="mb-5 mt-1">
+                    <h2 class="text-4xl font-black tracking-tight" id="balance-total">$0.00</h2>
+                </div>
+                
+                <!-- Tarjetas secundarias de Ingresos/Gastos con bordes definidos -->
+                <div class="grid grid-cols-2 gap-3.5 mt-2">
+                    <div class="bg-black/25 border border-white/10 rounded-2xl p-3 flex items-center space-x-3">
+                        <div class="p-2 bg-emerald-500 rounded-xl text-white">
+                            <i data-lucide="arrow-down-left" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-emerald-200 block font-bold uppercase tracking-wide">Ingresos</span>
+                            <span class="text-sm font-black block" id="balance-ingresos">$0.00</span>
+                        </div>
+                    </div>
+                    <div class="bg-black/25 border border-white/10 rounded-2xl p-3 flex items-center space-x-3">
+                        <div class="p-2 bg-rose-600 rounded-xl text-white">
+                            <i data-lucide="arrow-up-right" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-emerald-200 block font-bold uppercase tracking-wide">Gastos</span>
+                            <span class="text-sm font-black block" id="balance-gastos">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONTROLES DE FILTRO RAPIDOS -->
+            <div class="px-4 space-y-4">
+                <div class="p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl border-2 border-slate-300 dark:border-slate-700 space-y-3.5">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                            <i data-lucide="sliders-horizontal" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i> Período de Consulta
+                        </h3>
+                    </div>
+
+                    <!-- Tipo de filtro (Segmented control clásico de celular) -->
+                    <div class="grid grid-cols-2 gap-2 p-1 bg-slate-200 dark:bg-slate-950 rounded-xl border border-slate-300 dark:border-slate-800">
+                        <button id="btn-filtro-mes" onclick="setFiltroTipo('mes')" class="py-2 text-xs font-black rounded-lg transition-all bg-white dark:bg-slate-800 shadow text-slate-950 dark:text-white border border-slate-300 dark:border-slate-700">
+                            Mensual
+                        </button>
+                        <button id="btn-filtro-quincena" onclick="setFiltroTipo('quincena')" class="py-2 text-xs font-black rounded-lg transition-all text-slate-700 dark:text-slate-400">
+                            Quincenal
+                        </button>
+                    </div>
+
+                    <!-- Selectores de Mes y Año en una sola fila -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Año</label>
+                            <select id="filtro-anio" onchange="renderApp()" class="w-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-600">
+                                <!-- Llenado dinámico -->
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Mes</label>
+                            <select id="filtro-mes" onchange="renderApp()" class="w-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-600">
+                                <option value="0">Enero</option>
+                                <option value="1">Febrero</option>
+                                <option value="2">Marzo</option>
+                                <option value="3">Abril</option>
+                                <option value="4">Mayo</option>
+                                <option value="5">Junio</option>
+                                <option value="6">Julio</option>
+                                <option value="7">Agosto</option>
+                                <option value="8">Septiembre</option>
+                                <option value="9">Octubre</option>
+                                <option value="10">Noviembre</option>
+                                <option value="11">Diciembre</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Quincenas (Segmented control) -->
+                    <div id="contenedor-quincena" class="hidden pt-1">
+                        <label class="block text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Quincena activa</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="btn-q1" onclick="setQuincena(1)" class="py-2.5 text-xs font-extrabold border-2 border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 rounded-xl transition-all">
+                                1ª Quincena (1-15)
+                            </button>
+                            <button id="btn-q2" onclick="setQuincena(2)" class="py-2.5 text-xs font-extrabold border-2 border-transparent bg-slate-200 dark:bg-slate-900 text-slate-800 dark:text-slate-300 rounded-xl transition-all">
+                                2ª Quincena (16+)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LISTADO DE MOVIMIENTOS -->
+            <div class="px-4 space-y-3.5">
+                <div class="flex justify-between items-center px-1">
+                    <h3 class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                        <i data-lucide="list-filter" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i> Movimientos Registrados
+                    </h3>
+                    <span class="text-xs font-extrabold text-slate-900 dark:text-white bg-slate-200 dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-300 dark:border-slate-750" id="transacciones-contador">0</span>
+                </div>
+
+                <div id="lista-transacciones" class="space-y-2.5">
+                    <!-- Renderizado dinámico de transacciones -->
+                </div>
+            </div>
+
+        </section>
+
+        <!-- PESTAÑA 2: GRÁFICOS / ANÁLISIS (A pantalla completa para celular) -->
+        <section id="tab-charts" class="hidden p-4 space-y-4">
+            <div class="flex justify-between items-center pb-2 border-b-2 border-slate-200 dark:border-slate-800">
+                <h2 class="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <i data-lucide="bar-chart-3" class="text-emerald-600 dark:text-emerald-400"></i> Análisis de Gastos
+                </h2>
+            </div>
+
+            <div class="relative w-full min-h-[300px] flex items-center justify-center bg-slate-100 dark:bg-slate-950 rounded-2xl p-4 border-2 border-slate-300 dark:border-slate-800">
+                <canvas id="expensesChart" class="max-h-full max-w-full"></canvas>
+                <div id="chart-fallback" class="hidden text-slate-700 dark:text-slate-300 text-sm flex flex-col items-center gap-3 py-10">
+                    <div class="p-4 bg-slate-200 dark:bg-slate-900 rounded-full">
+                        <i data-lucide="bar-chart-3" class="w-10 h-10 text-slate-500"></i>
+                    </div>
+                    <span class="font-extrabold text-center max-w-[200px]">No hay gastos registrados en este período.</span>
+                </div>
+            </div>
+            
+            <div class="p-4 bg-emerald-50 dark:bg-emerald-950/20 border-2 border-emerald-600/30 rounded-2xl space-y-2">
+                <h4 class="text-xs font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                    <i data-lucide="info" class="w-4 h-4"></i> Control de Consumos
+                </h4>
+                <p class="text-xs text-slate-800 dark:text-slate-300 leading-relaxed font-bold">
+                    Este gráfico de barras muestra la suma acumulada de tus salidas por categoría. Te ayuda a comparar visualmente qué rubros consumen la mayor parte de tus recursos.
+                </p>
+            </div>
+        </section>
+
+        <!-- PESTAÑA 3: CONFIGURACIÓN / AJUSTES (Copia de seguridad, Categorías, PWA) -->
+        <section id="tab-settings" class="hidden p-4 space-y-4">
+            <h2 class="text-lg font-black text-slate-900 dark:text-white pb-2 border-b-2 border-slate-200 dark:border-slate-800 flex items-center gap-2">
+                <i data-lucide="settings" class="text-emerald-600 dark:text-emerald-400"></i> Panel de Ajustes
+            </h2>
+
+            <!-- Categorías de Gastos -->
+            <div class="p-4 bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-800 rounded-2xl space-y-3 shadow-sm">
+                <h3 class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <i data-lucide="tags" class="text-emerald-600 dark:text-emerald-400"></i> Gestor de Categorías
+                </h3>
+                <form onsubmit="handleAddCategory(event)" class="flex gap-2">
+                    <input type="text" id="new-category-name" required placeholder="Ej. Mascotas, Gimnasio" class="px-3.5 py-3 flex-1 bg-slate-100 dark:bg-slate-950 border-2 border-slate-300 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-600">
+                    <button type="submit" class="p-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors border border-emerald-700">
+                        <i data-lucide="plus" class="w-5 h-5"></i>
+                    </button>
+                </form>
+
+                <div class="max-h-48 overflow-y-auto space-y-2 pr-1 no-scrollbar" id="categories-list-container">
+                    <!-- Dinámico -->
+                </div>
+            </div>
+
+            <!-- Seguridad e importación -->
+            <div class="p-4 bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-800 rounded-2xl space-y-3.5 shadow-sm">
+                <h3 class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <i data-lucide="database" class="text-emerald-600 dark:text-emerald-400"></i> Seguridad de Datos
+                </h3>
+                <p class="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed">
+                    Tus datos se guardan de forma local en tu navegador. Te recomendamos descargar un archivo de respaldo antes de cambiar de navegador o celular.
+                </p>
+                <div class="grid grid-cols-2 gap-2 pt-1">
+                    <button onclick="exportData()" class="py-3 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-emerald-700">
+                        <i data-lucide="download" class="w-4 h-4"></i> Respaldar
+                    </button>
+                    <div class="relative">
+                        <input type="file" id="import-file" onchange="importData(event)" accept=".json" class="hidden">
+                        <button onclick="document.getElementById('import-file').click()" class="w-full py-3 px-3 bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-black rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-slate-300 dark:border-slate-700">
+                            <i data-lucide="upload" class="w-4 h-4"></i> Importar
+                        </button>
+                    </div>
+                </div>
+                <button onclick="confirmResetApp()" class="w-full py-3 px-4 bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-black rounded-xl flex items-center justify-center gap-1.5 transition-colors border-2 border-rose-300">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i> Borrar Todo el Historial
+                </button>
+            </div>
+
+            <!-- PWA Instalación -->
+            <div class="p-4 bg-emerald-700 text-white rounded-2xl space-y-3 shadow-md border border-emerald-800">
+                <h3 class="text-xs font-black uppercase tracking-wider text-emerald-100 flex items-center gap-1.5">
+                    <i data-lucide="smartphone" class="w-5 h-5"></i> ¿Cómo instalar la PWA?
+                </h3>
+                <p class="text-xs font-bold text-emerald-50 leading-relaxed">
+                    Usa esta aplicación sin internet y con ícono propio en la pantalla de inicio:
+                </p>
+                <div class="space-y-2 text-[11px] font-bold text-emerald-100 bg-black/20 p-3 rounded-xl border border-white/10">
+                    <div class="flex items-start gap-2">
+                        <i data-lucide="chrome" class="w-4 h-4 shrink-0 mt-0.5 text-emerald-300"></i>
+                        <span><b>Android (Chrome/Edge):</b> Pulsa el menú de tres puntos y elige <b>"Agregar a la pantalla principal"</b>.</span>
+                    </div>
+                    <div class="flex items-start gap-2 pt-1 border-t border-white/5">
+                        <i data-lucide="share" class="w-4 h-4 shrink-0 mt-0.5 text-emerald-300"></i>
+                        <span><b>iOS (Safari):</b> Presiona el botón de compartir (<i data-lucide="share" class="w-3.5 h-3.5 inline"></i>) y selecciona <b>"Agregar al inicio"</b>.</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- BARRA DE NAVEGACIÓN MÓVIL INFERIOR -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t-2 border-slate-300 dark:border-slate-800 shadow-2xl transition-colors">
+        <div class="max-w-md mx-auto px-4 py-2 flex justify-between items-center relative">
+            
+            <!-- Botón Tab Inicio -->
+            <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center gap-1 text-emerald-600 dark:text-emerald-400 py-2 px-4 transition-all duration-150">
+                <i data-lucide="home" class="w-5 h-5 stroke-[2.5]"></i>
+                <span class="text-[10px] font-black uppercase tracking-wider">Inicio</span>
+            </button>
+
+            <!-- Botón Central de Agregar (Muy grande, óptimo para pulgar) -->
+            <div class="absolute left-1/2 -translate-x-1/2 -top-5">
+                <button onclick="openModal('addTransactionModal')" class="bg-emerald-600 hover:bg-emerald-500 text-white p-4 rounded-full shadow-2xl transition-transform active:scale-90 border-4 border-white dark:border-slate-900 flex items-center justify-center" title="Agregar Movimiento">
+                    <i data-lucide="plus" class="w-7 h-7 stroke-[3]"></i>
+                </button>
+            </div>
+            
+            <div class="w-14"></div> <!-- Espaciador para no tapar el botón central -->
+
+            <!-- Botón Tab Reportes -->
+            <button onclick="switchTab('charts')" id="nav-charts" class="flex flex-col items-center gap-1 text-slate-700 dark:text-slate-400 py-2 px-4 transition-all duration-150">
+                <i data-lucide="bar-chart-3" class="w-5 h-5 stroke-[2.5]"></i>
+                <span class="text-[10px] font-black uppercase tracking-wider">Reportes</span>
+            </button>
+
+            <!-- Botón Tab Ajustes -->
+            <button onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center gap-1 text-slate-700 dark:text-slate-400 py-2 px-4 transition-all duration-150">
+                <i data-lucide="settings" class="w-5 h-5 stroke-[2.5]"></i>
+                <span class="text-[10px] font-black uppercase tracking-wider">Ajustes</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- MODAL: REGISTRO DE TRANSACCIÓN -->
+    <div id="addTransactionModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden transition-all transform translate-y-full border-t-2 sm:border-2 border-slate-300 dark:border-slate-800" id="addTransactionModal-content">
+            <div class="p-4 border-b-2 border-slate-200 dark:border-slate-850 flex justify-between items-center bg-slate-100 dark:bg-slate-905">
+                <h3 class="text-base font-black text-slate-950 dark:text-white flex items-center gap-2">
+                    <i data-lucide="plus-circle" class="text-emerald-600 dark:text-emerald-400"></i> Nuevo Movimiento
+                </h3>
+                <button onclick="closeModal('addTransactionModal')" class="p-2 bg-slate-200 dark:bg-slate-800 rounded-full text-slate-900 dark:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <form onsubmit="handleNewTransaction(event)" class="p-5 space-y-4">
+                <!-- Selector Tipo (Entrada / Salida) -->
+                <div>
+                    <label class="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Tipo de Movimiento</label>
+                    <div class="grid grid-cols-2 gap-2 bg-slate-200 dark:bg-slate-950 p-1 rounded-xl border border-slate-300 dark:border-slate-800">
+                        <button type="button" id="form-type-egreso" onclick="setFormType('salida')" class="py-3 text-xs font-black rounded-lg transition-all bg-white dark:bg-slate-800 shadow text-rose-600 dark:text-rose-450 border border-slate-300 dark:border-slate-700">
+                            💸 Salida (Gasto)
+                        </button>
+                        <button type="button" id="form-type-ingreso" onclick="setFormType('entrada')" class="py-3 text-xs font-black rounded-lg transition-all text-slate-700 dark:text-slate-400">
+                            💰 Entrada (Ingreso)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Monto -->
+                <div>
+                    <label for="form-monto" class="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Monto ($)</label>
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-black text-slate-500 dark:text-slate-400">$</span>
+                        <input type="number" step="0.01" id="form-monto" required min="0.01" placeholder="0.00" class="pl-9 pr-4 py-3.5 w-full bg-slate-100 dark:bg-slate-950 border-2 border-slate-300 dark:border-slate-700 rounded-2xl text-2xl font-black text-slate-950 dark:text-white focus:ring-4 focus:ring-emerald-600/30 placeholder-slate-400">
+                    </div>
+                </div>
+
+                <!-- Descripción -->
+                <div>
+                    <label for="form-descripcion" class="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Concepto / Descripción</label>
+                    <input type="text" id="form-descripcion" required placeholder="Ej. Mandado, Gasolina, Pago de nómina" class="px-4 py-3 w-full bg-slate-100 dark:bg-slate-950 border-2 border-slate-300 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-950 dark:text-white focus:ring-4 focus:ring-emerald-600/30 placeholder-slate-500">
+                </div>
+
+                <!-- Categoría -->
+                <div>
+                    <label for="form-categoria" class="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Categoría</label>
+                    <select id="form-categoria" required class="px-4 py-3 w-full bg-slate-100 dark:bg-slate-950 border-2 border-slate-300 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-950 dark:text-white focus:ring-4 focus:ring-emerald-600/30">
+                        <!-- Dinámico -->
+                    </select>
+                </div>
+
+                <!-- Fecha -->
+                <div>
+                    <label for="form-fecha" class="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Fecha de Operación</label>
+                    <input type="date" id="form-fecha" required class="px-4 py-3 w-full bg-slate-100 dark:bg-slate-950 border-2 border-slate-300 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-950 dark:text-white focus:ring-4 focus:ring-emerald-600/30">
+                </div>
+
+                <!-- Botones Guardar -->
+                <div class="pt-3 flex space-x-3">
+                    <button type="button" onclick="closeModal('addTransactionModal')" class="flex-1 py-3.5 px-4 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-750 text-slate-900 dark:text-slate-100 font-extrabold rounded-xl transition-colors border border-slate-300 dark:border-slate-700">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="flex-1 py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl shadow-lg transition-colors border border-emerald-700">
+                        Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DE CONFIRMACIÓN PERSONALIZADO (Evita el uso de alert/confirm de navegador) -->
+    <div id="confirmModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl shadow-2xl p-5 border-2 border-slate-300 dark:border-slate-800 text-center space-y-4" id="confirmModal-content">
+            <div class="mx-auto p-3 bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-450 rounded-full w-12 h-12 flex items-center justify-center">
+                <i data-lucide="alert-triangle" class="w-6 h-6 stroke-[2.5]"></i>
+            </div>
+            <div class="space-y-1">
+                <h3 class="text-base font-black text-slate-950 dark:text-white" id="confirm-title">¿Estás seguro?</h3>
+                <p class="text-xs text-slate-700 dark:text-slate-300 font-bold leading-relaxed" id="confirm-message">Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="flex space-x-3 pt-2">
+                <button id="btn-confirm-cancel" class="flex-1 py-3 bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-black rounded-xl border border-slate-300 dark:border-slate-700">
+                    Cancelar
+                </button>
+                <button id="btn-confirm-accept" class="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black rounded-xl border border-rose-750 shadow-md">
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTIFICACIONES FEEDBACK INLINE -->
+    <div id="toast-message" class="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-slate-950 text-white dark:bg-white dark:text-slate-950 px-5 py-3.5 rounded-2xl shadow-2xl flex items-center space-x-2.5 transition-all duration-300 transform scale-0 opacity-0 pointer-events-none border border-slate-700 dark:border-slate-200">
+        <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400 dark:text-emerald-600" id="toast-icon"></i>
+        <span class="text-xs font-black tracking-wide" id="toast-text">¡Acción realizada con éxito!</span>
+    </div>
+
+    <!-- SCRIPT PRINCIPAL DE LA APLICACIÓN -->
+    <script>
+        // --- PWA MANIFEST DINÁMICO ---
+        function setDynamicManifest() {
+            const manifestObj = {
+                "short_name": "FinanzasPro",
+                "name": "FinanzasPro - Control de Gastos Inteligente",
+                "icons": [
+                    {
+                        "src": "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&w=192&q=80",
+                        "type": "image/png",
+                        "sizes": "192x192"
+                    },
+                    {
+                        "src": "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&w=512&q=80",
+                        "type": "image/png",
+                        "sizes": "512x512"
+                    }
+                ],
+                "start_url": window.location.href,
+                "background_color": "#020617",
+                "theme_color": "#047857",
+                "display": "standalone",
+                "orientation": "portrait"
+            };
+            const stringManifest = JSON.stringify(manifestObj);
+            const blob = new Blob([stringManifest], {type: 'application/json'});
+            const manifestUrl = URL.createObjectURL(blob);
+            document.getElementById('pwa-manifest').setAttribute('href', manifestUrl);
+        }
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const swCode = `
+                    const CACHE_NAME = 'finanzaspro-v2';
+                    const urlsToCache = [
+                        '${window.location.href}',
+                        'https://cdn.tailwindcss.com',
+                        'https://unpkg.com/lucide@latest',
+                        'https://cdn.jsdelivr.net/npm/chart.js'
+                    ];
+                    self.addEventListener('install', event => {
+                        event.waitUntil(
+                            caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+                        );
+                    });
+                    self.addEventListener('fetch', event => {
+                        event.respondWith(
+                            caches.match(event.request).then(response => response || fetch(event.request))
+                        );
+                    });
+                `;
+                const blob = new Blob([swCode], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(blob);
+                navigator.serviceWorker.register(swUrl).catch(err => console.log('SW registration error:', err));
+            });
+        }
+
+        // --- ESTADO GLOBAL (Interfaz en CERO absoluto para comenzar) ---
+        let appState = {
+            transactions: [], // Comienza vacío por solicitud del usuario
+            categories: ["Comida", "Transporte", "Vivienda", "Entretenimiento", "Servicios", "Sueldo", "Inversiones", "Otros"],
+            filters: {
+                tipo: 'mes', // 'mes' o 'quincena'
+                anio: new Date().getFullYear(),
+                mes: new Date().getMonth(),
+                quincena: 1 // 1 o 2
+            },
+            currentFormType: 'salida',
+            chartType: 'bar', // Forzado solo a gráfico de barras
+            activeTab: 'home' // 'home', 'charts', 'settings'
+        };
+
+        let myChartInstance = null;
+        let confirmCallback = null;
+
+        // --- MODAL DE CONFIRMACIÓN INTEGRADO ---
+        function showConfirm(title, message, onAccept) {
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = message;
+            confirmCallback = onAccept;
+            
+            const modal = document.getElementById('confirmModal');
+            modal.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        // Setup de listeners de botones de confirmación
+        document.getElementById('btn-confirm-cancel').onclick = function() {
+            document.getElementById('confirmModal').classList.add('hidden');
+            confirmCallback = null;
+        };
+
+        document.getElementById('btn-confirm-accept').onclick = function() {
+            document.getElementById('confirmModal').classList.add('hidden');
+            if (confirmCallback) {
+                confirmCallback();
+            }
+            confirmCallback = null;
+        };
+
+        // --- MANEJO DE VISTAS (TAB SWITCH) ---
+        function switchTab(tabId) {
+            appState.activeTab = tabId;
+            
+            // Ocultar todas las secciones
+            document.getElementById('tab-home').classList.add('hidden');
+            document.getElementById('tab-charts').classList.add('hidden');
+            document.getElementById('tab-settings').classList.add('hidden');
+
+            // Mostrar activa
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+            // Actualizar estilo botones navegación
+            const tabs = ['home', 'charts', 'settings'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`nav-${t}`);
+                if (t === tabId) {
+                    btn.className = "flex flex-col items-center gap-1 text-emerald-600 dark:text-emerald-400 py-2 px-4 transition-all duration-150";
+                } else {
+                    btn.className = "flex flex-col items-center gap-1 text-slate-700 dark:text-slate-400 py-2 px-4 transition-all duration-150 hover:text-slate-900";
+                }
+            });
+
+            // Si es reportes, renderizar de nuevo el gráfico para ajustar tamaños móviles
+            if (tabId === 'charts') {
+                renderApp();
+            }
+
+            scrollToTop();
+            lucide.createIcons();
+        }
+
+        // --- LOCALSTORAGE ---
+        function saveToLocalStorage() {
+            localStorage.setItem('finanzaspro_transactions', JSON.stringify(appState.transactions));
+            localStorage.setItem('finanzaspro_categories', JSON.stringify(appState.categories));
+        }
+
+        function loadFromLocalStorage() {
+            const savedTransactions = localStorage.getItem('finanzaspro_transactions');
+            const savedCategories = localStorage.getItem('finanzaspro_categories');
+            
+            if (savedTransactions) {
+                appState.transactions = JSON.parse(savedTransactions);
+            } else {
+                // Interfaz limpia en 0 por solicitud del usuario
+                appState.transactions = [];
+            }
+            
+            if (savedCategories) {
+                appState.categories = JSON.parse(savedCategories);
+            }
+        }
+
+        window.onload = function() {
+            setDynamicManifest();
+            loadFromLocalStorage();
+            initializeFilters();
+            renderApp();
+            
+            // Iniciar Modo Oscuro automático o guardado
+            if (localStorage.getItem('dark-mode') === 'true' || (!('dark-mode' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                updateThemeIcon(true);
+            } else {
+                document.documentElement.classList.remove('dark');
+                updateThemeIcon(false);
+            }
+        };
+
+        function initializeFilters() {
+            const selectAnio = document.getElementById('filtro-anio');
+            const currentYear = new Date().getFullYear();
+            
+            for (let i = currentYear - 3; i <= currentYear + 2; i++) {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.text = i;
+                if (i === currentYear) opt.selected = true;
+                selectAnio.appendChild(opt);
+            }
+
+            document.getElementById('filtro-mes').value = new Date().getMonth();
+            updateCategorySelectors();
+        }
+
+        function updateCategorySelectors() {
+            const selectCat = document.getElementById('form-categoria');
+            selectCat.innerHTML = '';
+            appState.categories.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                selectCat.appendChild(opt);
+            });
+        }
+
+        // --- STREAMING_CHUNK: Implementando la lógica del filtrado dinámico... ---
+        // --- LOGICA DE RENDER ---
+        function renderApp() {
+            const activeYear = parseInt(document.getElementById('filtro-anio').value);
+            const activeMonth = parseInt(document.getElementById('filtro-mes').value);
+            
+            appState.filters.anio = activeYear;
+            appState.filters.mes = activeMonth;
+
+            // Filtrado quincenal o mensual estricto
+            const filteredTransactions = appState.transactions.filter(t => {
+                const tDate = new Date(t.date + 'T00:00:00');
+                const tYear = tDate.getFullYear();
+                const tMonth = tDate.getMonth();
+                const tDay = tDate.getDate();
+
+                if (tYear !== activeYear || tMonth !== activeMonth) return false;
+
+                if (appState.filters.tipo === 'quincena') {
+                    if (appState.filters.quincena === 1) {
+                        return tDay <= 15;
+                    } else {
+                        return tDay > 15;
+                    }
+                }
+                return true;
+            });
+
+            filteredTransactions.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+            // Totales de saldo
+            let totalIngresos = 0;
+            let totalGastos = 0;
+
+            filteredTransactions.forEach(t => {
+                if (t.type === 'entrada') {
+                    totalIngresos += t.amount;
+                } else {
+                    totalGastos += t.amount;
+                }
+            });
+
+            const balanceTotal = totalIngresos - totalGastos;
+            const formatCurrency = (val) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val);
+
+            document.getElementById('balance-total').textContent = formatCurrency(balanceTotal);
+            document.getElementById('balance-ingresos').textContent = formatCurrency(totalIngresos);
+            document.getElementById('balance-gastos').textContent = formatCurrency(totalGastos);
+
+            // Período etiqueta
+            const nombresMeses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+            let periodoTexto = nombresMeses[activeMonth];
+            if (appState.filters.tipo === 'quincena') {
+                periodoTexto = `${appState.filters.quincena}ª Qna. - ${nombresMeses[activeMonth]}`;
+            }
+            document.getElementById('current-period-label').textContent = periodoTexto;
+
+            renderTransactionsList(filteredTransactions);
+            renderChart(filteredTransactions);
+            lucide.createIcons();
+        }
+
+        // --- STREAMING_CHUNK: Creando el listado dinámico de movimientos... ---
+        function renderTransactionsList(transactionsList) {
+            const listContainer = document.getElementById('lista-transacciones');
+            const counterContainer = document.getElementById('transacciones-contador');
+            
+            counterContainer.textContent = transactionsList.length;
+            listContainer.innerHTML = '';
+
+            if (transactionsList.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="text-center py-12 bg-slate-50 dark:bg-slate-900 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-800">
+                        <div class="p-3 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full inline-block mb-2">
+                            <i data-lucide="receipt-text" class="w-8 h-8"></i>
+                        </div>
+                        <h4 class="text-sm font-black text-slate-900 dark:text-white">Sin movimientos</h4>
+                        <p class="text-xs text-slate-650 dark:text-slate-400 mt-1 font-bold">Pulsa el botón "+" para registrar tu primer operación.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            transactionsList.forEach(t => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = "p-3.5 bg-slate-50 dark:bg-slate-900/60 rounded-2xl flex items-center justify-between transition-colors border-2 border-slate-300 dark:border-slate-800 shadow-sm";
+                
+                const dateObj = new Date(t.date + 'T00:00:00');
+                const options = { day: 'numeric', month: 'short' };
+                const dateFormatted = dateObj.toLocaleDateString('es-MX', options);
+
+                const isIngreso = t.type === 'entrada';
+                const typeIcon = isIngreso ? 'arrow-down-left' : 'arrow-up-right';
+                const typeColorClass = isIngreso ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white';
+                const amountSign = isIngreso ? '+' : '-';
+                const amountColorClass = isIngreso ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-650 dark:text-rose-450';
+
+                itemDiv.innerHTML = `
+                    <div class="flex items-center space-x-3.5 min-w-0 flex-1">
+                        <div class="p-2.5 rounded-xl shrink-0 ${typeColorClass} shadow-sm">
+                            <i data-lucide="${typeIcon}" class="w-5 h-5 stroke-[2.5]"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <span class="font-black text-sm text-slate-950 dark:text-white block truncate leading-tight">${t.desc}</span>
+                            <div class="flex items-center gap-1.5 mt-1 text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                                <span class="bg-slate-200 dark:bg-slate-800 border border-slate-350 dark:border-slate-700 px-2 py-0.5 rounded-md text-[10px] tracking-wide uppercase font-black">${t.category}</span>
+                                <span>•</span>
+                                <span>${dateFormatted}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2.5 ml-3 shrink-0">
+                        <span class="font-black text-sm ${amountColorClass}">${amountSign}${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(t.amount)}</span>
+                        <button onclick="handleDeleteTransaction('${t.id}')" class="p-2.5 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 rounded-xl transition-colors border border-rose-200 dark:border-rose-900" title="Eliminar">
+                            <i data-lucide="trash" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                `;
+                listContainer.appendChild(itemDiv);
+            });
+        }
+
+        function setFiltroTipo(tipo) {
+            appState.filters.tipo = tipo;
+            
+            const btnMes = document.getElementById('btn-filtro-mes');
+            const btnQuincena = document.getElementById('btn-filtro-quincena');
+            const contQuincena = document.getElementById('contenedor-quincena');
+
+            if (tipo === 'mes') {
+                btnMes.className = "py-2 text-xs font-black rounded-lg transition-all bg-white dark:bg-slate-800 shadow text-slate-950 dark:text-white border border-slate-300 dark:border-slate-700";
+                btnQuincena.className = "py-2 text-xs font-bold rounded-lg transition-all text-slate-700 dark:text-slate-400";
+                contQuincena.classList.add('hidden');
+            } else {
+                btnQuincena.className = "py-2 text-xs font-black rounded-lg transition-all bg-white dark:bg-slate-800 shadow text-slate-950 dark:text-white border border-slate-300 dark:border-slate-700";
+                btnMes.className = "py-2 text-xs font-bold rounded-lg transition-all text-slate-700 dark:text-slate-400";
+                contQuincena.classList.remove('hidden');
+            }
+            renderApp();
+        }
+
+        function setQuincena(q) {
+            appState.filters.quincena = q;
+            const btnQ1 = document.getElementById('btn-q1');
+            const btnQ2 = document.getElementById('btn-q2');
+
+            if (q === 1) {
+                btnQ1.className = "py-2.5 text-xs font-extrabold border-2 border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 rounded-xl transition-all";
+                btnQ2.className = "py-2.5 text-xs font-extrabold border-2 border-transparent bg-slate-200 dark:bg-slate-900 text-slate-850 dark:text-slate-300 rounded-xl transition-all";
+            } else {
+                btnQ2.className = "py-2.5 text-xs font-extrabold border-2 border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 rounded-xl transition-all";
+                btnQ1.className = "py-2.5 text-xs font-extrabold border-2 border-transparent bg-slate-200 dark:bg-slate-900 text-slate-850 dark:text-slate-300 rounded-xl transition-all";
+            }
+            renderApp();
+        }
+
+        // --- STREAMING_CHUNK: Creando funciones para manejo de modales... ---
+        // --- MODALES ---
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            const content = document.getElementById(`${modalId}-content`);
+            modal.classList.remove('hidden');
+            
+            void modal.offsetWidth;
+            
+            content.classList.remove('translate-y-full');
+            content.classList.add('translate-y-0');
+
+            if (modalId === 'addTransactionModal') {
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('form-fecha').value = today;
+                setFormType('salida');
+            }
+            lucide.createIcons();
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            const content = document.getElementById(`${modalId}-content`);
+            
+            content.classList.remove('translate-y-0');
+            content.classList.add('translate-y-full');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 250);
+        }
+
+        // --- MANEJO FORMULARIOS ---
+        function setFormType(type) {
+            appState.currentFormType = type;
+            const btnEgreso = document.getElementById('form-type-egreso');
+            const btnIngreso = document.getElementById('form-type-ingreso');
+
+            if (type === 'salida') {
+                btnEgreso.className = "py-3 text-xs font-black rounded-lg transition-all bg-white dark:bg-slate-800 shadow text-rose-600 dark:text-rose-450 border border-slate-300 dark:border-slate-700";
+                btnIngreso.className = "py-3 text-xs font-bold rounded-lg transition-all text-slate-700 dark:text-slate-400";
+            } else {
+                btnIngreso.className = "py-3 text-xs font-black rounded-lg transition-all bg-white dark:bg-slate-800 shadow text-emerald-700 dark:text-emerald-405 border border-slate-300 dark:border-slate-700";
+                btnEgreso.className = "py-3 text-xs font-bold rounded-lg transition-all text-slate-700 dark:text-slate-400";
+            }
+        }
+
+        function handleNewTransaction(e) {
+            e.preventDefault();
+
+            const amountVal = parseFloat(document.getElementById('form-monto').value);
+            const descVal = document.getElementById('form-descripcion').value.trim();
+            const categoryVal = document.getElementById('form-categoria').value;
+            const dateVal = document.getElementById('form-fecha').value;
+
+            if (isNaN(amountVal) || amountVal <= 0 || !descVal || !categoryVal || !dateVal) {
+                showToast("Por favor ingresa datos correctos.", "error");
+                return;
+            }
+
+            const newTx = {
+                id: crypto.randomUUID(),
+                type: appState.currentFormType,
+                amount: amountVal,
+                desc: descVal,
+                category: categoryVal,
+                date: dateVal
+            };
+
+            appState.transactions.push(newTx);
+            saveToLocalStorage();
+            renderApp();
+            
+            e.target.reset();
+            closeModal('addTransactionModal');
+            showToast("Movimiento registrado", "success");
+        }
+
+        // --- STREAMING_CHUNK: Implementando eliminación con modal de confirmación personalizado... ---
+        function handleDeleteTransaction(id) {
+            showConfirm(
+                "¿Eliminar movimiento?", 
+                "Esta acción retirará de manera permanente este registro de tu balance actual.", 
+                function() {
+                    appState.transactions = appState.transactions.filter(t => t.id !== id);
+                    saveToLocalStorage();
+                    renderApp();
+                    showToast("Movimiento eliminado", "success");
+                }
+            );
+        }
+
+        // --- CATEGORÍAS ---
+        function renderCategoriesManager() {
+            const container = document.getElementById('categories-list-container');
+            container.innerHTML = '';
+
+            appState.categories.forEach(cat => {
+                const item = document.createElement('div');
+                item.className = "flex items-center justify-between p-2.5 bg-slate-100 dark:bg-slate-800/50 rounded-xl border border-slate-300 dark:border-slate-700";
+                item.innerHTML = `
+                    <span class="text-sm font-black text-slate-900 dark:text-white">${cat}</span>
+                    <button onclick="handleDeleteCategory('${cat}')" class="p-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/45 dark:hover:bg-rose-900 text-rose-600 dark:text-rose-400 rounded-xl transition-colors border border-rose-200 dark:border-rose-900">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                `;
+                container.appendChild(item);
+            });
+            lucide.createIcons();
+        }
+
+        function handleAddCategory(e) {
+            e.preventDefault();
+            const input = document.getElementById('new-category-name');
+            const catName = input.value.trim();
+
+            if (!catName) return;
+
+            if (appState.categories.some(c => c.toLowerCase() === catName.toLowerCase())) {
+                showToast("La categoría ya existe", "error");
+                return;
+            }
+
+            appState.categories.push(catName);
+            saveToLocalStorage();
+            updateCategorySelectors();
+            renderCategoriesManager();
+            input.value = '';
+            showToast("Categoría creada", "success");
+        }
+
+        function handleDeleteCategory(catName) {
+            showConfirm(
+                "¿Eliminar categoría?", 
+                `¿Deseas eliminar la categoría "${catName}"? Esto no afectará las transacciones ya registradas con ella.`, 
+                function() {
+                    appState.categories = appState.categories.filter(c => c !== catName);
+                    saveToLocalStorage();
+                    updateCategorySelectors();
+                    renderCategoriesManager();
+                    showToast("Categoría eliminada", "success");
+                }
+            );
+        }
+
+        // --- STREAMING_CHUNK: Creando el gráfico de barras optimizado y de alto contraste... ---
+        // --- GRÁFICOS (Únicamente de barras) ---
+        function renderChart(filteredTx) {
+            const canvas = document.getElementById('expensesChart');
+            const fallback = document.getElementById('chart-fallback');
+            
+            const gastos = filteredTx.filter(t => t.type === 'salida');
+
+            if (gastos.length === 0) {
+                canvas.classList.add('hidden');
+                fallback.classList.remove('hidden');
+                if (myChartInstance) {
+                    myChartInstance.destroy();
+                    myChartInstance = null;
+                }
+                return;
+            }
+
+            canvas.classList.remove('hidden');
+            fallback.classList.add('hidden');
+
+            const catTotals = {};
+            gastos.forEach(g => {
+                catTotals[g.category] = (catTotals[g.category] || 0) + g.amount;
+            });
+
+            const labels = Object.keys(catTotals);
+            const data = Object.values(catTotals);
+
+            // Paleta con máximo contraste visual (Gráfico de barras)
+            const chartColors = [
+                '#047857', // Esmeralda fuerte
+                '#1d4ed8', // Azul fuerte
+                '#b45309', // Ámbar oscuro
+                '#be185d', // Rosa oscuro
+                '#6d28d9', // Violeta oscuro
+                '#be123c', // Rojo oscuro
+                '#0369a1', // Celeste fuerte
+                '#475569'  // Slate oscuro
+            ];
+
+            if (myChartInstance) {
+                myChartInstance.destroy();
+            }
+
+            const ctx = canvas.getContext('2d');
+            const isDark = document.documentElement.classList.contains('dark');
+            const textThemeColor = isDark ? '#ffffff' : '#0f172a';
+            const gridColor = isDark ? '#334155' : '#cbd5e1';
+
+            myChartInstance = new Chart(ctx, {
+                type: 'bar', // Tipo de gráfico fijado estrictamente en barras
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Gastos por Categoría',
+                        data: data,
+                        backgroundColor: chartColors.slice(0, labels.length),
+                        borderWidth: 2,
+                        borderColor: isDark ? '#0f172a' : '#ffffff',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false // No se necesita leyenda para barras individuales de un mismo set
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` $${context.parsed.y.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: gridColor
+                            },
+                            ticks: { 
+                                color: textThemeColor, 
+                                font: { weight: 'bold', size: 10 } 
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: { 
+                                color: textThemeColor, 
+                                font: { weight: 'bold', size: 10 } 
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- RESPALDOS ---
+        function exportData() {
+            const dataStr = JSON.stringify({
+                transactions: appState.transactions,
+                categories: appState.categories
+            }, null, 2);
+            
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `Respaldo_FinanzasPro_${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            
+            showToast("Respaldo descargado", "success");
+        }
+
+        function importData(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const imported = JSON.parse(evt.target.result);
+                    if (Array.isArray(imported.transactions) && Array.isArray(imported.categories)) {
+                        appState.transactions = imported.transactions;
+                        appState.categories = imported.categories;
+                        saveToLocalStorage();
+                        updateCategorySelectors();
+                        renderApp();
+                        showToast("Datos restaurados", "success");
+                    } else {
+                        showToast("Archivo incorrecto", "error");
+                    }
+                } catch (err) {
+                    showToast("Error al importar", "error");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function confirmResetApp() {
+            showConfirm(
+                "¿Borrar todo el historial?", 
+                "Esta acción eliminará de forma irreversible todas las transacciones guardadas. Asegúrate de respaldar si no quieres perder tu información.", 
+                function() {
+                    appState.transactions = [];
+                    saveToLocalStorage();
+                    renderApp();
+                    showToast("Historial borrado", "success");
+                }
+            );
+        }
+
+        // --- EXTRAS ---
+        function toggleDarkMode() {
+            const doc = document.documentElement;
+            const isDark = doc.classList.contains('dark');
+            if (isDark) {
+                doc.classList.remove('dark');
+                localStorage.setItem('dark-mode', 'false');
+                updateThemeIcon(false);
+            } else {
+                doc.classList.add('dark');
+                localStorage.setItem('dark-mode', 'true');
+                updateThemeIcon(true);
+            }
+            renderApp();
+        }
+
+        function updateThemeIcon(isDark) {
+            const icon = document.getElementById('theme-icon');
+            if (isDark) {
+                icon.setAttribute('data-lucide', 'sun');
+            } else {
+                icon.setAttribute('data-lucide', 'moon');
+            }
+            lucide.createIcons();
+        }
+
+        function showToast(message, type = "success") {
+            const toast = document.getElementById('toast-message');
+            const text = document.getElementById('toast-text');
+            const icon = document.getElementById('toast-icon');
+
+            text.textContent = message;
+
+            if (type === "success") {
+                icon.className = "w-5 h-5 text-emerald-400 dark:text-emerald-600";
+                icon.setAttribute('data-lucide', 'check-circle');
+            } else {
+                icon.className = "w-5 h-5 text-rose-500";
+                icon.setAttribute('data-lucide', 'alert-circle');
+            }
+            lucide.createIcons();
+
+            toast.classList.remove('scale-0', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('scale-100', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('scale-100', 'opacity-100');
+                toast.classList.add('scale-0', 'opacity-0', 'pointer-events-none');
+            }, 3000);
+        }
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'instant' });
+            document.querySelector('main').scrollTo({ top: 0, behavior: 'instant' });
+        }
+    </script>
+</body>
+</html>
